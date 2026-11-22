@@ -1,0 +1,37 @@
+[package]
+name = "logseek-core"
+description = "The engine of LogSeek Studio: indexing, search and analysis of large logs and tables"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[dependencies]
+zstd = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+csv-core = "0.1"
+flate2 = "1"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+crossbeam-channel = "0.5"
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
+memchr = "2"
+calamine = "0.38"
+evtx = { version = "0.15", default-features = false }
+aho-corasick = "1"
+
+[dev-dependencies]
+rand = "0.8"
+tempfile = "3"
+regex = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation", "Win32_System_ProcessStatus", "Win32_System_Threading", "Win32_Foundation", "Win32_System_JobObjects", "Win32_Security", "Win32_Storage_FileSystem"] }
+
+[features]
+# reads the LOGSEEK_* developer switches in an optimised build (screenshots, stress runs)
+devtools = []
