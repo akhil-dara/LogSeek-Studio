@@ -1,0 +1,98 @@
+name: Release
+
+# A version tag (v0.1.0) builds the Windows program and its installer and
+# attaches both to a GitHub release. "Run workflow" builds the same files
+# without making a release, to try the build.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Version from the tag (or Cargo.toml when run by hand)
+        id: ver
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(grep -m1 '^version' Cargo.toml | cut -d '"' -f2)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Build
+        run: cargo build --release -p logseek
+
+      - name: Portable zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $name = "LogSeek-Studio-${{ steps.ver.outputs.version }}-windows-x64"
+          New-Item -ItemType Directory -Force "dist/$name" | Out-Null
+          Copy-Item target/release/logseek.exe "dist/$name/"
+          Copy-Item LICENSE "dist/$name/LICENSE.txt"
+          Copy-Item licenses/THIRD-PARTY-LICENSES.txt "dist/$name/"
+          Copy-Item installer/README.txt "dist/$name/README.txt"
+          Compress-Archive -Path "dist/$name/*" -DestinationPath "dist/$name.zip"
+          Remove-Item -Recurse -Force "dist/$name"
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+            $env:Path += ";${env:ProgramFiles(x86)}\Inno Setup 6"
+          }
+          iscc "/DAppVersion=${{ steps.ver.outputs.version }}" installer\logseek.iss
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logseek-studio-windows
+          path: dist/*
+
+      # The release text is this version's section of CHANGELOG.md, word for word.
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.version }}"
+          $out = New-Object System.Collections.Generic.List[string]
+          $in = $false
+          foreach ($line in Get-Content CHANGELOG.md -Encoding utf8) {
+            if ($line -match '^## ') {
+              if ($in) { break }
+              if ($line.Trim() -eq "## $ver") { $in = $true }
+              continue
+            }
+            if ($in) { $out.Add($line) }
+          }
+          if ($out.Count -eq 0) { throw "CHANGELOG.md has no section for $ver" }
+          $out | Set-Content release-notes.md -Encoding utf8
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LogSeek Studio ${{ steps.ver.outputs.version }}
+          body_path: release-notes.md
+          files: dist/*

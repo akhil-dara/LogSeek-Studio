@@ -1,0 +1,9 @@
+# Text files are stored with LF and checked out the way each machine likes.
+* text=auto
+
+# Test fixtures are read byte for byte: a changed line ending changes the test.
+crates/*/tests/fixtures/** -text
+
+# Never treated as text.
+*.png binary
+*.ico binary
