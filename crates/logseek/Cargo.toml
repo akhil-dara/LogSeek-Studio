@@ -1,0 +1,39 @@
+[package]
+name = "logseek"
+description = "LogSeek Studio: a desktop explorer for very large logs and tables"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "logseek"
+path = "src/main.rs"
+
+[dependencies]
+logseek-core = { path = "../logseek-core" }
+eframe = { version = "=0.36.2", default-features = false, features = ["glow", "default_fonts", "persistence", "accesskit"] }
+egui-phosphor = "=0.14.0"
+rfd = "=0.15.4"
+serde = { version = "1", features = ["derive"] }
+crossbeam-channel = "0.5"
+flate2 = "1"
+serde_json = "1"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
+aho-corasick = "1"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+# reads the LOGSEEK_* developer switches in an optimised build (screenshots, stress runs)
+devtools = ["logseek-core/devtools"]

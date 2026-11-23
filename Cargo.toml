@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["crates/logseek-core", "crates/logseek"]
+
+[workspace.package]
+version = "0.1.2"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/akhil-dara/LogSeek-Studio"
+keywords = ["log-viewer", "csv", "json", "evtx", "dfir"]
+categories = ["visualization", "text-processing"]
+publish = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+# unwind (not abort): a parser panic on hostile input is contained per chunk
+panic = "unwind"
+strip = true
+
+# debug builds keep line numbers only (enough for test failures and backtraces):
+# full debug info grew the build folder to tens of GB and hit the linker's PDB limit
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
